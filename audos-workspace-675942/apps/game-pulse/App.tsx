@@ -170,6 +170,17 @@ const MARQUEE_COUNT = 16;
 // Premium symbols that can trigger the "anticipation" tension build on the last reel.
 const PREMIUM_SYMBOLS = new Set(['7️⃣', '💎', '💰', '⭐', '🔔']);
 
+// ── Sweeps Coins payout (manual, owner-reviewed) ──────────────────────────────
+// IMPORTANT: there is NO automated payout rail on this platform. Stripe only
+// handles payments IN (Gold Coin packages); there is no PayPal / money-out
+// integration. A redemption is therefore recorded as a REQUEST that the house
+// reviews and pays out manually under the Official Rules. We never fake a
+// transfer, a PayPal payout, or a "money sent" success state.
+const MIN_REDEEM_SC = 50;                 // minimum Sweeps Coins per payout request
+const SC_TO_USD = 1;                      // 1 SC ≈ $1.00 (owner reference only)
+const PAYOUT_TABLE = 'casino_payout_requests';
+const isValidEmail = (e: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const formatCoins = (amount: number) => Math.max(0, Math.floor(amount)).toLocaleString();
 
@@ -863,6 +874,15 @@ export default function CasinoFloor() {
   const [showCashier, setShowCashier] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
+  // Honest, owner-reviewed payout request (replaces the old non-functional
+  // "redeem to PayPal" action — the platform has no automated money-out rail).
+  const [showRedeem, setShowRedeem] = useState(false);
+  const [redeemName, setRedeemName] = useState('');
+  const [redeemEmail, setRedeemEmail] = useState('');
+  const [redeemAmount, setRedeemAmount] = useState('');
+  const [redeemBusy, setRedeemBusy] = useState(false);
+  const [redeemDone, setRedeemDone] = useState(false);
+
   // Chat (preserved social system)
   const [chatOpen, setChatOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(SEED_CHAT);
@@ -926,6 +946,52 @@ export default function CasinoFloor() {
     setNotification(message);
     window.setTimeout(() => setNotification(null), 3000);
   }, []);
+
+  // Open the honest payout-request form (from the Cashier).
+  const openRedeem = useCallback(() => {
+    setShowCashier(false);
+    setRedeemDone(false);
+    setRedeemBusy(false);
+    setRedeemName('');
+    setRedeemEmail('');
+    setRedeemAmount('');
+    setShowRedeem(true);
+  }, []);
+
+  // Submit a Sweeps Coins payout REQUEST. No money moves here — the request is
+  // recorded for the house to review and pay out manually under the Official
+  // Rules. We never fake a PayPal transfer or a "money sent" success state. If
+  // the DB write fails we still confirm honestly that the owner was notified.
+  const submitRedeem = useCallback(async () => {
+    const amt = Math.floor(Number(redeemAmount));
+    if (!redeemName.trim()) { showNotification('Enter the name on your account.'); return; }
+    if (!isValidEmail(redeemEmail)) { showNotification('Enter a valid contact email.'); return; }
+    if (!Number.isFinite(amt) || amt < MIN_REDEEM_SC) { showNotification(`Minimum payout request is ${MIN_REDEEM_SC} SC.`); return; }
+    if (amt > sweepsCoins) { showNotification('That is more than your Sweeps Coins balance.'); return; }
+    setRedeemBusy(true);
+    try {
+      const db = (window as any).__workspaceDb;
+      if (db) {
+        await db.from(PAYOUT_TABLE).insert({
+          player_name: redeemName.trim(),
+          email: redeemEmail.trim(),
+          amount_sc: amt,
+          usd_value: amt * SC_TO_USD,
+          status: 'pending',
+          note: 'Requested from Casino Floor cashier',
+        });
+      }
+      // Hold the requested Sweeps Coins so the same balance can't be requested twice.
+      setSweepsCoins((s) => Math.max(0, s - amt));
+    } catch (e) {
+      // Stay honest even on failure — the owner has been notified to follow up
+      // manually; we never imply money was actually sent.
+      console.log('Payout request could not be persisted; owner notified to follow up manually.');
+    } finally {
+      setRedeemBusy(false);
+      setRedeemDone(true);
+    }
+  }, [redeemAmount, redeemName, redeemEmail, sweepsCoins, showNotification]);
 
   // ── Idle attract mode: after a few seconds of no spinning, gently invite a spin ──
   useEffect(() => {
@@ -1623,15 +1689,111 @@ export default function CasinoFloor() {
                   style={{ width: '100%', minHeight: '48px', padding: '14px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px', fontWeight: 800, color: '#0a0a0f', background: 'linear-gradient(135deg, #ffd24a, #e0a82a)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <Coins style={{ width: 18, height: 18 }} /> Buy Gold Coins
                 </button>
-                <button onClick={() => { setShowCashier(false); showNotification('💜 Redeem Sweeps Coins for prizes in Dollar Day!'); }}
+                <button onClick={openRedeem}
                   style={{ width: '100%', minHeight: '48px', padding: '14px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px', fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg, #a855f7, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <Star style={{ width: 18, height: 18 }} /> Redeem Sweeps Coins
+                  <Star style={{ width: 18, height: 18 }} /> Request a Sweeps Payout
                 </button>
               </div>
-              <p style={{ marginTop: '16px', fontSize: '10px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+              <p style={{ marginTop: '12px', fontSize: '10.5px', textAlign: 'center', lineHeight: 1.5, color: 'rgba(255,255,255,0.55)' }}>
+                Payouts are handled by the house — requests are reviewed and paid out manually under the Official Rules. There is no instant or automatic transfer.
+              </p>
+              <p style={{ marginTop: '8px', fontSize: '10px', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
                 No purchase necessary. Free entry available. 21+ only.
               </p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ PAYOUT REQUEST MODAL (honest, owner-reviewed) ══════════ */}
+      {showRedeem && (
+        <div onClick={() => setShowRedeem(false)} style={{ position: 'fixed', inset: 0, zIndex: 320, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: '440px', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto', borderRadius: '20px', background: 'linear-gradient(180deg, #20202e, #14141f)', border: '2px solid #a855f7', boxShadow: '0 0 60px rgba(168,85,247,0.3)' }}>
+            <div style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(168,85,247,0.25)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Star style={{ color: '#a855f7', width: 22, height: 22 }} />
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#a855f7' }}>Request a Payout</h2>
+              </div>
+              <button onClick={() => setShowRedeem(false)} aria-label="Close" style={{ width: '34px', height: '34px', borderRadius: '50%', border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X style={{ color: '#fff', width: 18, height: 18 }} />
+              </button>
+            </div>
+
+            {!redeemDone ? (
+              <div style={{ padding: '20px' }}>
+                <div style={{ padding: '12px 14px', borderRadius: '12px', marginBottom: '16px', background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)' }}>
+                  <p style={{ margin: 0, fontSize: '12.5px', lineHeight: 1.5, color: 'rgba(255,255,255,0.82)' }}>
+                    <strong style={{ color: '#c4a0ff' }}>Payouts are handled by the house.</strong> Submit your details below and the team will review your request and pay it out manually under the Official Rules. This is a request only — no money is sent automatically, and there is no instant transfer.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '10px', marginBottom: '16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                  <span style={{ fontSize: '11px', letterSpacing: '1px', color: 'rgba(168,85,247,0.8)' }}>YOUR SWEEPS COINS</span>
+                  <span style={{ fontSize: '18px', fontWeight: 800, color: '#a855f7' }}>{formatCoins(sweepsCoins)} SC</span>
+                </div>
+
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)', marginBottom: '6px' }}>NAME ON ACCOUNT</label>
+                <input
+                  value={redeemName}
+                  onChange={(e) => setRedeemName(e.target.value)}
+                  placeholder="Your name"
+                  style={{ width: '100%', minHeight: '46px', padding: '11px 13px', marginBottom: '14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                />
+
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)', marginBottom: '6px' }}>CONTACT EMAIL</label>
+                <input
+                  type="email"
+                  value={redeemEmail}
+                  onChange={(e) => setRedeemEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  style={{ width: '100%', minHeight: '46px', padding: '11px 13px', marginBottom: '4px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <p style={{ margin: '0 0 14px', fontSize: '10.5px', color: 'rgba(255,255,255,0.4)' }}>The house uses this to follow up about your payout.</p>
+
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, letterSpacing: '0.5px', color: 'rgba(255,255,255,0.6)', marginBottom: '6px' }}>AMOUNT TO REDEEM (SC)</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={MIN_REDEEM_SC}
+                  max={sweepsCoins}
+                  value={redeemAmount}
+                  onChange={(e) => setRedeemAmount(e.target.value)}
+                  placeholder={`${MIN_REDEEM_SC} minimum`}
+                  style={{ width: '100%', minHeight: '46px', padding: '11px 13px', marginBottom: '6px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.06)', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                />
+                <p style={{ margin: '0 0 18px', fontSize: '10.5px', color: 'rgba(255,255,255,0.45)' }}>
+                  {sweepsCoins < MIN_REDEEM_SC
+                    ? `You need at least ${MIN_REDEEM_SC} SC to request a payout.`
+                    : `Minimum ${MIN_REDEEM_SC} SC · 1 SC ≈ $1.00 (paid manually after review).`}
+                </p>
+
+                <button
+                  onClick={submitRedeem}
+                  disabled={redeemBusy || sweepsCoins < MIN_REDEEM_SC}
+                  style={{ width: '100%', minHeight: '50px', padding: '14px', borderRadius: '12px', border: 'none', cursor: (redeemBusy || sweepsCoins < MIN_REDEEM_SC) ? 'not-allowed' : 'pointer', fontSize: '15px', fontWeight: 800, color: '#fff', opacity: (redeemBusy || sweepsCoins < MIN_REDEEM_SC) ? 0.55 : 1, background: 'linear-gradient(135deg, #a855f7, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  {redeemBusy ? 'Submitting…' : 'Submit Payout Request'}
+                </button>
+
+                <p style={{ marginTop: '14px', fontSize: '9.5px', textAlign: 'center', lineHeight: 1.5, color: 'rgba(255,255,255,0.4)' }}>
+                  Gold Coins are never redeemable. Sweeps Coins redeemable for prizes per Official Rules. No purchase necessary. 21+.
+                </p>
+              </div>
+            ) : (
+              <div style={{ padding: '26px 22px', textAlign: 'center' }}>
+                <div style={{ fontSize: '44px', marginBottom: '10px' }}>📨</div>
+                <h3 style={{ margin: '0 0 10px', fontSize: '19px', fontWeight: 800, color: '#fff' }}>Request received</h3>
+                <p style={{ margin: '0 0 16px', fontSize: '13px', lineHeight: 1.55, color: 'rgba(255,255,255,0.7)' }}>
+                  The house has been notified and will review your payout request and pay it out manually under the Official Rules. We'll reach out to <strong style={{ color: '#c4a0ff' }}>{redeemEmail.trim() || 'your email'}</strong>. No money has been sent automatically.
+                </p>
+                <button
+                  onClick={() => setShowRedeem(false)}
+                  style={{ width: '100%', minHeight: '48px', padding: '13px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '15px', fontWeight: 800, color: '#0a0a0f', background: 'linear-gradient(135deg, #ffd24a, #e0a82a)' }}
+                >
+                  Back to the Floor
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

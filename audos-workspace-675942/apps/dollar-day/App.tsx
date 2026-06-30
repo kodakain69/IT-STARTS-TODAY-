@@ -526,10 +526,11 @@ const REDEMPTION_CONFIG = {
     { amount: 50, label: '$50' },
     { amount: 100, label: '$100' },
   ],
+  // Payouts are reviewed and paid out MANUALLY by the house under the Official
+  // Rules. There is no automated PayPal / money-out integration on the platform,
+  // so we never advertise an instant or "same day" transfer.
   methods: [
-    { id: 'paypal', name: 'PayPal', icon: '💳', timeframe: 'Same Day Payout', speed: 'fast', primary: true },
-    { id: 'chime', name: 'Chime', icon: '🏦', timeframe: '1-3 Business Days', speed: 'standard', primary: false },
-    { id: 'bank', name: 'Bank Card', icon: '💳', timeframe: '1-3 Business Days', speed: 'standard', primary: false },
+    { id: 'manual', name: 'Manual Review', icon: '🧾', timeframe: 'Reviewed by the house', speed: 'standard', primary: true },
   ],
 };
 

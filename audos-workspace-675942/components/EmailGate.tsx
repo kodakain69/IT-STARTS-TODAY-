@@ -953,7 +953,7 @@ export function EmailGate({ spaceId, branding, themeTokens, gdprEnabled, privacy
                 margin: 0,
                 lineHeight: 1.7,
               }}>
-                Earn Sweeps Coins through gameplay and redeem them for cash prizes, gift cards, and more via PayPal.
+                Earn Sweeps Coins through gameplay and request a payout — reviewed and paid out manually by the house under the Official Rules.
               </p>
             </div>
 
@@ -1156,7 +1156,7 @@ export function EmailGate({ spaceId, branding, themeTokens, gdprEnabled, privacy
                   margin: 0,
                   lineHeight: 1.6,
                 }}>
-                  Explore slots, table games, and our social arcade. Redeem Sweeps Coins for cash via PayPal.
+                  Explore slots, table games, and our social arcade. Request a Sweeps Coins payout — handled manually by the house.
                 </p>
               </div>
             </div>
@@ -1264,7 +1264,7 @@ export function EmailGate({ spaceId, branding, themeTokens, gdprEnabled, privacy
                 margin: 0,
                 lineHeight: 1.7,
               }}>
-                Awarded as bonuses with Gold Coin packages. Redeemable for real cash prizes via PayPal under official sweepstakes rules.
+                Awarded as bonuses with Gold Coin packages. Redeemable for real prizes — paid out manually by the house under official sweepstakes rules.
               </p>
             </div>
           </div>

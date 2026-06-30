@@ -605,7 +605,7 @@ export default function SpaceDesktop({
     if (name.includes('casino') || appId === 'game-pulse' || name.includes('diamond')) {
       return {
         label: 'CASINO FLOOR',
-        description: 'First-Person Walk-In • 26 Games • 7 Studios',
+        description: 'First-Person Walk-In • 26 Games • 7 Studios • Cashier & Payout Requests',
         color: '#00d4ff',
       };
     }
