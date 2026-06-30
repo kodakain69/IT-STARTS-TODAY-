@@ -1,0 +1,54 @@
+:root {
+  --space-brand-primary: #000000;
+  --space-brand-highlight: #ff0000;
+  --space-brand-contrast: #0000ff;
+  --space-brand-primary-50: #ebebeb;
+  --space-brand-primary-100: #d6d6d6;
+  --space-brand-primary-200: #b8b8b8;
+  --space-brand-primary-500: #000000;
+  --space-brand-primary-600: #000000;
+  --space-brand-primary-700: #000000;
+  --space-brand-primary-900: #000000;
+  --space-brand-highlight-50: #ffebeb;
+  --space-brand-highlight-100: #ffd6d6;
+  --space-brand-highlight-200: #ffb8b8;
+  --space-brand-highlight-500: #eb0000;
+  --space-brand-highlight-600: #ff0000;
+  --space-brand-highlight-700: #d60000;
+  --space-brand-highlight-900: #a80000;
+  --space-surface-page: #f2f2f2;
+  --space-surface-page-alt: #e6e6ff;
+  --space-surface-gradient-from: #f2f2f2;
+  --space-surface-gradient-via: #e6e6ff;
+  --space-surface-gradient-to: #ffeded;
+  --space-surface-card: #ffffff;
+  --space-surface-card-hover: #e6e6ff;
+  --space-surface-panel: #d1d1ff;
+  --space-surface-panel-strong: #c2c2ff;
+  --space-surface-muted: #fafafa;
+  --space-surface-accent-soft: #ffe6e6;
+  --space-border-default: #c7c7c7;
+  --space-border-strong: #a8a8a8;
+  --space-text-primary: #000000;
+  --space-text-secondary: #000000;
+  --space-text-brand: #000000;
+  --space-text-accent: #470000;
+  --space-text-muted: #000000;
+  --space-text-on-primary: #ffffff;
+  --space-text-on-highlight: #000000;
+  --space-text-on-contrast: #ffffff;
+  --space-semantic-success: #16a34a;
+  --space-semantic-warning: #d97706;
+  --space-semantic-danger: #dc2626;
+  --space-shell-button-text: #ffffff;
+  --space-shell-accent-button-text: #000000;
+  --space-shell-dock-text: #ffffff;
+  --space-shell-icon: #470000;
+  --space-shell-shadow: #b3b3b3;
+  --space-shell-shadow-strong: #8f8f8f;
+}
+
+body {
+  color: var(--space-text-primary);
+  background: var(--space-surface-page);
+}

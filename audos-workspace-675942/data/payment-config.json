@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "mode": "connect",
+  "stripeAccountId": "acct_1TSCaQLB1i7LWuas",
+  "platformFeeBps": 500,
+  "currency": "USD",
+  "businessName": "DAM Fortunes Casino",
+  "supportEmail": "kodakain69@gmail.com",
+  "defaultTrialDays": 7,
+  "defaultPriceCents": 500,
+  "defaultPriceId": null
+}
